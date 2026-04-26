@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { useRouter, Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
+import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryButton from "../src/components/PrimaryButton";
 import InputField from "../src/components/InputField";
@@ -21,9 +22,11 @@ const skyline = require("../src/assets/images/skyline.png");
 
 export default function LoginScreen() {
   const router = useRouter();
-  
+
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Form State
   const [email, setEmail] = useState("");
@@ -31,7 +34,28 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
 
-  const isValidEmail = email.endsWith("@student.utem.edu.my") || email.endsWith("@utem.edu.my");
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
+
+  const isValidEmail =
+    email.endsWith("@student.utem.edu.my") || email.endsWith("@utem.edu.my");
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedEmail = await SecureStore.getItemAsync("rememberedEmail");
+        const savedPassword = await SecureStore.getItemAsync("rememberedPassword");
+        if (savedEmail && savedPassword) {
+          setEmail(savedEmail);
+          setPassword(savedPassword);
+          setRememberMe(true);
+        }
+      } finally {
+        setCredentialsLoaded(true);
+      }
+    };
+    loadSavedCredentials();
+  }, []);
 
   const handleSubmit = async () => {
     if (!email || !password) return;
@@ -53,8 +77,12 @@ export default function LoginScreen() {
         });
         const token = response.data.accessToken;
         await SecureStore.setItemAsync("userToken", token);
-        Alert.alert("Success", "Account created successfully!");
-        
+
+        // Send OTP for email verification
+        await apiClient.post("/auth/send-otp", { email });
+
+        // Navigate to OTP screen
+        router.push({ pathname: "/otp", params: { email } });
       } else {
         // --- API LOGIN ---
         const response = await apiClient.post("/auth/login", {
@@ -63,15 +91,36 @@ export default function LoginScreen() {
         });
         const token = response.data.accessToken;
         await SecureStore.setItemAsync("userToken", token);
-        Alert.alert("Success", "Welcome back!");
-      }
-      
-      // Navigate to Home screen when authentication logic is verified.
-      // router.replace("/(tabs)/home");
 
+        // Save or clear remembered credentials
+        if (rememberMe) {
+          await SecureStore.setItemAsync("rememberedEmail", email);
+          await SecureStore.setItemAsync("rememberedPassword", password);
+        } else {
+          await SecureStore.deleteItemAsync("rememberedEmail");
+          await SecureStore.deleteItemAsync("rememberedPassword");
+        }
+
+        // Route based on user role
+        const role = response.data.user?.role;
+        const userName = response.data.user?.name;
+        if (role === "DRIVER" || role === "ADMIN") {
+          router.replace({
+            pathname: "/choose-mode",
+            params: { name: userName },
+          });
+        } else {
+          router.replace({ pathname: "/home", params: { role: "RIDER" } });
+        }
+      }
     } catch (error: any) {
-      const message = error.response?.data?.message || "Something went wrong. Check your connection.";
-      Alert.alert("Authentication Failed", typeof message === "string" ? message : message[0]);
+      const message =
+        error.response?.data?.message ||
+        "Something went wrong. Check your connection.";
+      Alert.alert(
+        "Authentication Failed",
+        typeof message === "string" ? message : message[0],
+      );
     } finally {
       setLoading(false);
     }
@@ -90,15 +139,14 @@ export default function LoginScreen() {
         >
           {/* Main Content */}
           <View className="flex-1 px-8 pt-12 pb-6">
-            
             {/* Header */}
             <View className="mb-8">
               <Text className="text-3xl font-poppins-bold text-primary mb-1">
                 {isRegisterMode ? "Create Account" : "Welcome Back!"}
               </Text>
               <Text className="text-base font-poppins text-gray-500 leading-6">
-                {isRegisterMode 
-                  ? "Join the UTeM Ride community." 
+                {isRegisterMode
+                  ? "Join the UTeM Ride community."
                   : "Log in with your UTeM email\nto continue."}
               </Text>
             </View>
@@ -144,31 +192,85 @@ export default function LoginScreen() {
               />
             </View>
 
-            <View className="mb-6">
+            <View className="mb-4">
               <InputField
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                rightIcon={
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={22}
+                    color="#9CA3AF"
+                  />
+                }
+                onRightIconPress={() => setShowPassword(!showPassword)}
               />
             </View>
+
+            {/* Remember Me */}
+            {!isRegisterMode && (
+              <Pressable
+                onPress={() => setRememberMe(!rememberMe)}
+                className="flex-row items-center mb-6"
+              >
+                <Ionicons
+                  name={rememberMe ? "checkbox" : "square-outline"}
+                  size={22}
+                  color={rememberMe ? "#2952CC" : "#D1D5DB"}
+                />
+                <Text className="text-sm font-poppins text-gray-500 ml-2">
+                  Remember me
+                </Text>
+              </Pressable>
+            )}
 
             {/* Continue Button */}
             <PrimaryButton
               title={isRegisterMode ? "Register" : "Login"}
               onPress={handleSubmit}
               loading={loading}
-              disabled={!isValidEmail || password.length < 8}
             />
 
             {/* Toggle Mode */}
             <View className="flex-row justify-center mt-6">
               <Text className="font-poppins text-gray-600">
-                {isRegisterMode ? "Already have an account? " : "Don't have an account? "}
+                {isRegisterMode
+                  ? "Already have an account? "
+                  : "Don't have an account? "}
               </Text>
-              <Pressable onPress={() => setIsRegisterMode(!isRegisterMode)}>
+              <Pressable onPress={async () => {
+                const goingToRegister = !isRegisterMode;
+                setIsRegisterMode(goingToRegister);
+                setShowPassword(false);
+
+                if (goingToRegister) {
+                  // Clear fields for fresh registration
+                  setEmail("");
+                  setPassword("");
+                  setName("");
+                  setStudentId("");
+                } else {
+                  // Restore remembered credentials for login
+                  setCredentialsLoaded(false);
+                  const savedEmail = await SecureStore.getItemAsync("rememberedEmail");
+                  const savedPassword = await SecureStore.getItemAsync("rememberedPassword");
+                  if (savedEmail && savedPassword) {
+                    setEmail(savedEmail);
+                    setPassword(savedPassword);
+                    setRememberMe(true);
+                  } else {
+                    setEmail("");
+                    setPassword("");
+                  }
+                  setName("");
+                  setStudentId("");
+                  setCredentialsLoaded(true);
+                }
+              }}>
                 <Text className="font-poppins-bold text-secondary">
                   {isRegisterMode ? "Log In" : "Register"}
                 </Text>
@@ -189,7 +291,8 @@ export default function LoginScreen() {
                   </Pressable>
                 </Link>
                 <Text className="text-xs font-poppins text-gray-400">
-                  {" "}and{" "}
+                  {" "}
+                  and{" "}
                 </Text>
                 <Link href="/privacy" asChild>
                   <Pressable>
@@ -203,12 +306,12 @@ export default function LoginScreen() {
           </View>
 
           {/* Skyline Illustration (bottom) */}
-          <View className="w-full items-center">
+          <View className="w-full items-center mt-auto">
             <Image
               source={skyline}
-              className="w-full h-40"
+              className="w-full h-64"
               resizeMode="cover"
-              style={{ opacity: 0.6 }}
+              style={{ opacity: 0.6, marginBottom: -60 }}
             />
           </View>
         </ScrollView>

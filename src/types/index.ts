@@ -19,4 +19,6 @@ export interface RideRequest {
   estimatedArrival?: string;
 }
 
-export type AppScreen = "splash" | "login" | "home" | "terms" | "privacy";
+export type AppScreen = "splash" | "login" | "otp" | "choose-mode" | "home" | "terms" | "privacy";
+
+export type UserRole = "RIDER" | "DRIVER" | "ADMIN";

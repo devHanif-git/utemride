@@ -6,10 +6,13 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto } from './dto';
+import { RegisterDto, LoginDto, SendOtpDto, VerifyOtpDto } from './dto';
 
 @Injectable()
 export class AuthService {
+  // In-memory OTP store: email -> { code, expiresAt }
+  private otpStore = new Map<string, { code: string; expiresAt: Date }>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -101,5 +104,68 @@ export class AuthService {
       email,
       role,
     });
+  }
+
+  /**
+   * Send OTP — generates a random 6-digit code and stores it in memory.
+   * In the future this will send via email (e.g. Resend).
+   */
+  async sendOtp(dto: SendOtpDto) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    this.otpStore.set(dto.email, { code, expiresAt });
+
+    // Log for testing (visible in Postman / server console)
+    console.log(`[OTP] Code for ${dto.email}: ${code}`);
+
+    return {
+      message: 'OTP sent successfully',
+      // Return the code in dev for easy testing via Postman
+      ...(process.env.NODE_ENV !== 'production' && { code }),
+    };
+  }
+
+  /**
+   * Verify OTP — checks the code against the in-memory store.
+   * Returns the user's role so the frontend can decide where to navigate.
+   */
+  async verifyOtp(dto: VerifyOtpDto) {
+    const entry = this.otpStore.get(dto.email);
+
+    if (!entry) {
+      throw new UnauthorizedException('No OTP found for this email. Please request a new one.');
+    }
+
+    if (new Date() > entry.expiresAt) {
+      this.otpStore.delete(dto.email);
+      throw new UnauthorizedException('OTP has expired. Please request a new one.');
+    }
+
+    if (entry.code !== dto.code) {
+      throw new UnauthorizedException('Invalid OTP code.');
+    }
+
+    // OTP verified — clean up
+    this.otpStore.delete(dto.email);
+
+    // Fetch user to return their role
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    return {
+      message: 'OTP verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    };
   }
 }

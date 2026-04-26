@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { LogBox } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,6 +17,9 @@ import "../global.css";
 // Prevent the native splash screen from auto-hiding
 // We control it manually after fonts load
 SplashScreen.preventAutoHideAsync();
+
+// Suppress deprecation warning from internal Expo/RN libraries (not our code)
+LogBox.ignoreLogs(["SafeAreaView has been deprecated"]);
 
 /**
  * Root layout — handles font loading, splash screen control,

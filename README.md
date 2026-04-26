@@ -219,7 +219,7 @@ This project is for educational purposes at UTeM.
 
 ## 👤 Author
 
-**Hanif** — UTeM Student
+**Muhammad Hanif Firdaus (devHanif)** — UTeM Student
 
 ---
 
