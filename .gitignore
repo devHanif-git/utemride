@@ -45,13 +45,21 @@ backend/prisma/*.db-journal
 # ─── Docker ───
 postgres_data/
 
-# ─── Build & TypeScript ───
+# ─── Build, Testing & TypeScript ───
 *.tsbuildinfo
 build/
+coverage/
+.nyc_output/
 
 # ─── OS & Editor Files ───
 .DS_Store
+*.DS_Store
 .vscode/
+.idea/
 *.pem
 Thumbs.db
-
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

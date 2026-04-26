@@ -1,89 +1,166 @@
-import { useEffect, useRef } from "react";
-import { View, Text, Image, Animated } from "react-native";
-import { useRouter, useRootNavigationState } from "expo-router";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, Image, ImageBackground, Animated, Dimensions } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
-// Update this to whatever logo asset best matches the shield in the mockup
-const logo = require("../src/assets/images/logo.png");
+import { PrimaryButton } from "../src/components/ui/PrimaryButton";
+import { SecondaryButton } from "../src/components/ui/SecondaryButton";
 
-export default function SplashScreen() {
+const bgImage = require("../src/assets/images/Branding page.png");
+const logo = require("../src/assets/images/logo-w.png");
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+export default function LandingScreen() {
   const router = useRouter();
-  const navigationState = useRootNavigationState();
+  
+  // Animation value for the bottom sheet sliding up to full screen
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const handleAuthAction = (mode: "login" | "register") => {
+    // Animate the sheet upwards
+    Animated.timing(sheetAnim, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true, 
+    }).start(() => {
+      // Navigate once animation completes
+      router.push({ pathname: "/login", params: { mode } });
+      
+      // Reset animation value shortly after navigation
+      setTimeout(() => {
+        sheetAnim.setValue(0);
+      }, 500);
+    });
+  };
 
-  // Creates an array of 4 Animated Values, initialized to opacity 0.3
-  const dotOpacities = useRef(
-    [...Array(4)].map(() => new Animated.Value(0.3)),
-  ).current;
+  const sheetTranslateY = sheetAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -SCREEN_HEIGHT * 0.55], 
+  });
 
-  useEffect(() => {
-    // Wait until navigation is ready before scheduling the redirect
-    if (!navigationState?.key) return;
 
-    const timer = setTimeout(() => {
-      router.replace("/login");
-    }, 3000);
-
-    const animate = () => {
-      const animations = dotOpacities.map((val, i) =>
-        Animated.sequence([
-          Animated.delay(i * 150),
-          Animated.timing(val, {
-            toValue: 1,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-          Animated.timing(val, {
-            toValue: 0.3,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-
-      Animated.loop(Animated.stagger(150, animations)).start();
-    };
-
-    animate();
-
-    return () => clearTimeout(timer);
-  }, [navigationState?.key]);
 
   return (
-    <SafeAreaView className="flex-1 bg-primary relative">
-      <View className="flex-1 items-center justify-center px-8">
-        {/* Shield Logo */}
-        <View className="items-center mb-6">
-          <Image source={logo} className="w-48 h-48" resizeMode="contain" />
+    <View className="flex-1" style={{ backgroundColor: '#081C4A' }}>
+      {/* Background image — scaled up to fill more vertical space */}
+      <Image 
+        source={bgImage} 
+        style={{ 
+          position: 'absolute',
+          width: '220%',
+          height: '90%',
+          left: '-50%',
+        }} 
+        resizeMode="contain"
+        blurRadius={1}
+      />
+      {/* Base dark overlay for overall tinting */}
+      <View 
+        style={{ 
+          position: 'absolute', 
+          top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: '#081C4A', 
+          opacity: 0.6 
+        }} 
+      />
+      {/* Top gradient fade — covers top edge of image */}
+      <LinearGradient
+        colors={['#081C4A', '#081C4A', '#081C4Acc', 'transparent']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '35%' }}
+      />
+      {/* Bottom gradient fade — covers bottom edge of image */}
+      <LinearGradient
+        colors={['transparent', '#081C4Acc', '#081C4A', '#081C4A']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '35%' }}
+      />
+
+      <SafeAreaView className="flex-1 relative justify-between" edges={['top', 'left', 'right']}>
+        {/* Header — Logo + Text centered */}
+        <View className="flex-1 items-center justify-center">
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Image source={logo} style={{ width: 115, height: 115 }} resizeMode="contain" />
+            <View style={{ marginLeft: 16, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', height: 42 }}>
+                <Text style={{ fontSize: 38, fontFamily: 'Poppins_600SemiBold', color: '#FFFFFF', lineHeight: 42 }}>UTeM </Text>
+                <Text style={{ fontSize: 38, fontFamily: 'Poppins_600SemiBold', color: '#245CDE', lineHeight: 42 }}>Ride</Text>
+              </View>
+              <Text style={{ fontSize: 16, fontFamily: 'Inter_400Regular', color: '#D1D5DB', marginTop: -2 }}>Your Campus. Your Ride.</Text>
+            </View>
+          </View>
         </View>
 
-        {/* App Name: UTeM RIDE */}
-        <View className="flex-row items-center justify-center">
-          <Text className="text-4xl font-poppins-bold text-white tracking-wide">
-            UTeM{" "}
-          </Text>
-          <Text className="text-4xl font-poppins-bold text-secondary tracking-wide">
-            RIDE
-          </Text>
-        </View>
-
-        {/* Tagline */}
-        <View className="items-center mt-2 mb-10">
-          <Text className="text-sm font-poppins text-gray-300 tracking-wider">
-            Your Campus. Your Ride.
-          </Text>
-        </View>
-      </View>
-
-      {/* Loading Dots Indicator at bottom */}
-      <View className="absolute bottom-16 w-full flex-row justify-center space-x-3">
-        {dotOpacities.map((animatedOpacity, index) => (
-          <Animated.View
-            key={index}
-            style={{ opacity: animatedOpacity }}
-            className="w-2 h-2 rounded-full bg-secondary"
+        {/* Feature Highlights */}
+        <View className="px-8" style={{ paddingBottom: SCREEN_HEIGHT * 0.32 }}>
+          <FeatureRow 
+            icon="shield-checkmark-outline" 
+            title="Safe & Verified" 
+            subtitle="Only UTeM students & drivers" 
           />
-        ))}
-      </View>
-    </SafeAreaView>
+          <FeatureRow 
+            icon="flash-outline" 
+            title="Fast & Reliable" 
+            subtitle={"Get to your destination\nquickly and easily"} 
+          />
+          <FeatureRow 
+            icon="business-outline" 
+            title="Campus Focused" 
+            subtitle={"Designed for UTeM\ncommunity"} 
+          />
+        </View>
+
+        {/* Bottom Sheet */}
+        <Animated.View 
+          style={{ 
+            position: 'absolute', 
+            top: '72%', 
+            width: '100%', 
+            height: SCREEN_HEIGHT,
+            backgroundColor: 'white', 
+            borderTopLeftRadius: 32, 
+            borderTopRightRadius: 32,
+            paddingHorizontal: 28,
+            paddingTop: 18,
+            alignItems: 'center',
+            transform: [{ translateY: sheetTranslateY }]
+          }}
+        >
+          <Text style={{ fontSize: 22, fontFamily: 'Poppins_700Bold', color: '#081C4A', marginBottom: 4 }}>Let's Get Started</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Inter_400Regular', color: '#6B7280', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+            Create your account to continue{"\n"}with UTeM Ride.
+          </Text>
+
+          <View className="w-full space-y-4 gap-4">
+            <PrimaryButton 
+              title="Create Account" 
+              onPress={() => handleAuthAction("register")}
+              style={{ backgroundColor: '#245CDE' }}
+            />
+            <SecondaryButton 
+              title="Log In" 
+              onPress={() => handleAuthAction("login")} 
+            />
+          </View>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
   );
 }
+
+function FeatureRow({ icon, title, subtitle }: { icon: any, title: string, subtitle: string }) {
+  return (
+    <View className="flex-row items-center mb-6">
+      <View className="w-[52px] h-[52px] rounded-full bg-white/10 items-center justify-center mr-4 border border-white/20">
+        <Ionicons name={icon} size={26} color="#FFFFFF" />
+      </View>
+      <View className="flex-1">
+        <Text style={{ fontSize: 16, fontFamily: 'Poppins_600SemiBold', color: '#FFFFFF', marginBottom: 2 }}>{title}</Text>
+        <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: '#D1D5DB', lineHeight: 18 }}>{subtitle}</Text>
+      </View>
+    </View>
+  );
+}
+

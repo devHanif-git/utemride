@@ -9,21 +9,23 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter, Link, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 
-import PrimaryButton from "../src/components/PrimaryButton";
-import InputField from "../src/components/InputField";
+import { PrimaryButton } from "../src/components/ui/PrimaryButton";
+import { SecondaryButton } from "../src/components/ui/SecondaryButton";
+import { TextInputField } from "../src/components/ui/TextInputField";
 import { apiClient } from "../src/api/client";
 
 const skyline = require("../src/assets/images/skyline.png");
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(params.mode === "register");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -33,6 +35,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [emailDomain, setEmailDomain] = useState("@student.utem.edu.my");
 
   const [credentialsLoaded, setCredentialsLoaded] = useState(false);
 
@@ -56,6 +59,13 @@ export default function LoginScreen() {
     };
     loadSavedCredentials();
   }, []);
+
+  // Derive email from studentId + domain in register mode
+  useEffect(() => {
+    if (isRegisterMode) {
+      setEmail(`${studentId.toLowerCase()}${emailDomain}`);
+    }
+  }, [studentId, emailDomain, isRegisterMode]);
 
   const handleSubmit = async () => {
     if (!email || !password) return;
@@ -138,13 +148,19 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Main Content */}
-          <View className="flex-1 px-8 pt-12 pb-6">
+          <View className="flex-1 px-8 pt-6 pb-6">
+            
+            {/* Back Button */}
+            <Pressable onPress={() => router.back()} className="mb-6 w-10 h-10 items-center justify-center rounded-full bg-gray-100">
+              <Ionicons name="arrow-back" size={24} color="#081C4A" />
+            </Pressable>
+
             {/* Header */}
             <View className="mb-8">
               <Text className="text-3xl font-poppins-bold text-primary mb-1">
                 {isRegisterMode ? "Create Account" : "Welcome Back!"}
               </Text>
-              <Text className="text-base font-poppins text-gray-500 leading-6">
+              <Text className="text-base font-inter text-gray-500 leading-6">
                 {isRegisterMode
                   ? "Join the UTeM Ride community."
                   : "Log in with your UTeM email\nto continue."}
@@ -154,61 +170,108 @@ export default function LoginScreen() {
             {/* Fields */}
             {isRegisterMode && (
               <>
-                <View className="mb-4">
-                  <InputField
-                    label="Full Name"
-                    placeholder="e.g. Ali Bin Abu"
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                  />
-                </View>
-                <View className="mb-4">
-                  <InputField
-                    label="Student ID"
-                    placeholder="e.g. B032410000"
-                    value={studentId}
-                    onChangeText={setStudentId}
-                    autoCapitalize="characters"
-                  />
+                <TextInputField
+                  label="Full Name"
+                  placeholder="e.g. Ali Bin Abu"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  icon="person-outline"
+                />
+                <TextInputField
+                  label="Student / Staff ID"
+                  placeholder="e.g. B032410000"
+                  value={studentId}
+                  onChangeText={setStudentId}
+                  autoCapitalize="characters"
+                  icon="card-outline"
+                />
+
+                {/* Domain Selector */}
+                <View className="mb-2">
+                  <Text className="text-sm font-poppins-medium text-gray-700 mb-2">
+                    Email Type
+                  </Text>
+                  <View className="flex-row rounded-xl overflow-hidden border border-accent-dark">
+                    <Pressable
+                      onPress={() => setEmailDomain("@student.utem.edu.my")}
+                      className={`flex-1 py-3 items-center ${
+                        emailDomain === "@student.utem.edu.my"
+                          ? "bg-primary"
+                          : "bg-accent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-poppins-semibold ${
+                          emailDomain === "@student.utem.edu.my"
+                            ? "text-white"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        Student
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setEmailDomain("@utem.edu.my")}
+                      className={`flex-1 py-3 items-center ${
+                        emailDomain === "@utem.edu.my"
+                          ? "bg-primary"
+                          : "bg-accent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-poppins-semibold ${
+                          emailDomain === "@utem.edu.my"
+                            ? "text-white"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        Staff
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </>
             )}
 
-            <View className="mb-4">
-              <InputField
-                label="UTeM Email"
-                placeholder="b032410000@student.utem.edu.my"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                error={
-                  email.length > 0 && !isValidEmail
-                    ? "Please use your UTeM email address"
-                    : undefined
-                }
-              />
-            </View>
+            <TextInputField
+              label="UTeM Email"
+              placeholder="b032410000@student.utem.edu.my"
+              value={email}
+              onChangeText={isRegisterMode ? undefined : setEmail}
+              editable={!isRegisterMode}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              icon="mail-outline"
+              style={isRegisterMode ? { opacity: 0.6 } : undefined}
+              error={
+                !isRegisterMode && email.length > 0 && !isValidEmail
+                  ? "Please use your UTeM email address"
+                  : undefined
+              }
+            />
 
-            <View className="mb-4">
-              <InputField
+            <View className="relative mb-4">
+              <TextInputField
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                rightIcon={
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={22}
-                    color="#9CA3AF"
-                  />
-                }
-                onRightIconPress={() => setShowPassword(!showPassword)}
+                icon="lock-closed-outline"
               />
+              <Pressable 
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 16, top: 48 }}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color="#9CA3AF"
+                />
+              </Pressable>
             </View>
 
             {/* Remember Me */}
@@ -222,7 +285,7 @@ export default function LoginScreen() {
                   size={22}
                   color={rememberMe ? "#2952CC" : "#D1D5DB"}
                 />
-                <Text className="text-sm font-poppins text-gray-500 ml-2">
+                <Text className="text-sm font-inter text-gray-500 ml-2">
                   Remember me
                 </Text>
               </Pressable>
@@ -237,7 +300,7 @@ export default function LoginScreen() {
 
             {/* Toggle Mode */}
             <View className="flex-row justify-center mt-6">
-              <Text className="font-poppins text-gray-600">
+              <Text className="font-inter text-gray-600">
                 {isRegisterMode
                   ? "Already have an account? "
                   : "Don't have an account? "}
@@ -249,10 +312,10 @@ export default function LoginScreen() {
 
                 if (goingToRegister) {
                   // Clear fields for fresh registration
-                  setEmail("");
                   setPassword("");
                   setName("");
                   setStudentId("");
+                  setEmailDomain("@student.utem.edu.my");
                 } else {
                   // Restore remembered credentials for login
                   setCredentialsLoaded(false);
