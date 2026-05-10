@@ -22,13 +22,13 @@ The Landing screen SHALL display branding elements, feature highlights, and a bo
 - **THEN** the background displays `Branding page.png` blended with a dark blue overlay
 - **AND** the header displays `logo-w.png` alongside the text "UTeM Ride" and the tagline "Your Campus. Your Ride."
 - **AND** feature highlights are visible with appropriately sized icons
-- **AND** a white bottom sheet displays "Let's Get Started" with "Create Account" (Primary 600 color) and "Log In" buttons.
+- **AND** a white bottom sheet displays "Let's Get Started" with "Verify My Campus Account" (Primary 600 color) and "Log In" buttons.
 
 ### Requirement: Animated Auth Transition
 The Landing screen SHALL transition to the authentication forms using a sliding upward animation of the bottom sheet.
 
 #### Scenario: Proceeding to Login or Register
-- **WHEN** the user taps "Create Account" or "Log In"
+- **WHEN** the user taps "Verify My Campus Account" or "Log In"
 - **THEN** the white bottom sheet animates to the top of the screen
 - **AND** the corresponding authentication form is revealed seamlessly within the expanded sheet.
 

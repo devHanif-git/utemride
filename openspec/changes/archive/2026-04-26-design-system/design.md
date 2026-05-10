@@ -24,7 +24,7 @@ The UTeM Ride application currently lacks a cohesive and scalable design system.
   - *Rationale*: Guarantees correct font rendering across devices. The Splash screen will wait for fonts to load before hiding.
 - **Component Architecture**: Create foundational functional components in a `components/ui/` directory. These components will encapsulate the NativeWind utility classes to prevent repetition and enforce consistency.
 - **Initial Routing Logic**: The root layout will handle authentication state checks. If authenticated, route to main/mode selection. If unauthenticated, route to the new Landing screen.
-- **Landing Screen Architecture**: The Landing screen will utilize `Branding page.png` for the background and `logo-p.png` (primary logo) for branding, along with a list of feature highlights. A bottom sheet container will house the "Let's Get Started" section with "Create Account" and "Log In" buttons.
+- **Landing Screen Architecture**: The Landing screen will utilize `Branding page.png` for the background and `logo-p.png` (primary logo) for branding, along with a list of feature highlights. A bottom sheet container will house the "Let's Get Started" section with "Verify My Campus Account" and "Log In" buttons.
 - **Auth Transition Animation**: When the user presses a button on the Landing screen, a shared element transition or an animated bottom sheet (using `react-native-reanimated`) will slide the white container upwards to cover the screen and seamlessly render the requested authentication form (Login or Register).
 
 ## Risks / Trade-offs

@@ -17,7 +17,7 @@
 
 - [x] 3.1 Implement initial routing logic in the root layout to direct authenticated users to the main app, and unauthenticated users to the Landing screen.
 - [x] 3.2 Create the Landing screen UI with the dark background, `Branding page.png`, `logo-p.png` (primary logo), and feature highlight rows.
-- [x] 3.3 Create the white bottom sheet component containing the "Let's Get Started" text, a primary "Create Account" button, and an outlined "Log In" button.
+- [x] 3.3 Create the white bottom sheet component containing the "Let's Get Started" text, a primary "Verify My Campus Account" button, and an outlined "Log In" button.
 - [x] 3.4 Implement the sliding upward animation (using `react-native-reanimated`) for the bottom sheet when an auth action is pressed.
 - [x] 3.5 Integrate the Login and Registration forms into the expanded bottom sheet state for a seamless transition.
 

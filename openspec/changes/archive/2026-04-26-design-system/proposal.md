@@ -13,7 +13,7 @@ To ensure visual consistency and a cohesive user experience across the UTeM Ride
 - Establish UX principles focusing on simplicity, clarity, trust, reduced friction, and highlighting primary actions.
 - Define map styling conventions (clean map, blue routes, UI overlays).
 - Implement a robust initial routing flow: Splash screen -> Landing screen (if unauthenticated) or Main/Mode selection (if authenticated).
-- Create a new landing screen featuring a dark background with brand elements, feature highlights, and a bottom sheet for authentication actions ("Create Account" and "Log In").
+- Create a new landing screen featuring a dark background with brand elements, feature highlights, and a bottom sheet for authentication actions ("Verify My Campus Account" and "Log In").
 - Implement a smooth sliding animation transition where the bottom sheet expands upwards to reveal the Login or Registration forms.
 
 ## Capabilities
