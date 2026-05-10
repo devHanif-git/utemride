@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Image, Pressable } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 
 const riderImg = require("../src/assets/images/rider.png");
@@ -17,16 +18,25 @@ export default function ChooseModeScreen() {
 
   const firstName = name ? name.split(" ")[0] : "there";
 
+  const handleLogout = async () => {
+    await SecureStore.deleteItemAsync("userToken");
+    router.replace("/login");
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-1 px-7 pt-4">
-        {/* Back Button */}
-        <Pressable
-          onPress={() => router.replace("/login")}
-          className="mb-6 p-2 -ml-2 self-start"
-        >
-          <Ionicons name="chevron-back" size={28} color="#0c2360" />
-        </Pressable>
+        <View className="mb-6 flex-row justify-end">
+          <Pressable
+            onPress={handleLogout}
+            className="flex-row items-center rounded-full bg-primary-100 px-4 py-2"
+          >
+            <Ionicons name="log-out-outline" size={18} color="#245CDE" />
+            <Text className="ml-2 text-sm font-poppins-semibold text-secondary">
+              Log Out
+            </Text>
+          </Pressable>
+        </View>
 
         {/* Greeting */}
         <Text className="text-4xl font-poppins-bold text-primary mb-2">

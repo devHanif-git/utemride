@@ -15,24 +15,29 @@ import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 
 import { PrimaryButton } from "../src/components/ui/PrimaryButton";
-import { SecondaryButton } from "../src/components/ui/SecondaryButton";
 import { TextInputField } from "../src/components/ui/TextInputField";
 import { apiClient } from "../src/api/client";
 
 const skyline = require("../src/assets/images/skyline.png");
+const logo = require("../src/assets/images/logo-b.png");
 
 export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const [isRegisterMode, setIsRegisterMode] = useState(params.mode === "register");
+  const [isRegisterMode, setIsRegisterMode] = useState(
+    params.mode === "register",
+  );
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [emailDomain, setEmailDomain] = useState("@student.utem.edu.my");
@@ -41,13 +46,60 @@ export default function LoginScreen() {
 
   const isValidEmail =
     email.endsWith("@student.utem.edu.my") || email.endsWith("@utem.edu.my");
+  const hasMinimumLength = password.length >= 8;
+  const hasLettersAndNumbers = /[A-Za-z]/.test(password) && /\d/.test(password);
+  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
+  const isStrongPassword =
+    hasMinimumLength && hasLettersAndNumbers && hasSpecialCharacter;
+
+  const restoreLoginCredentials = async () => {
+    setCredentialsLoaded(false);
+    const savedEmail = await SecureStore.getItemAsync("rememberedEmail");
+    const savedPassword = await SecureStore.getItemAsync("rememberedPassword");
+    if (savedEmail && savedPassword) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      setRememberMe(true);
+    } else {
+      setEmail("");
+      setPassword("");
+      setRememberMe(false);
+    }
+    setCredentialsLoaded(true);
+  };
+
+  const resetRegisterFields = () => {
+    setPassword("");
+    setConfirmPassword("");
+    setName("");
+    setStudentId("");
+    setEmailDomain("@student.utem.edu.my");
+    setAcceptedTerms(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const switchToLoginMode = async () => {
+    setIsRegisterMode(false);
+    resetRegisterFields();
+    await restoreLoginCredentials();
+  };
+
+  const handleBackPress = async () => {
+    if (isRegisterMode) {
+      await switchToLoginMode();
+      return;
+    }
+    router.back();
+  };
 
   // Load saved credentials on mount
   useEffect(() => {
     const loadSavedCredentials = async () => {
       try {
         const savedEmail = await SecureStore.getItemAsync("rememberedEmail");
-        const savedPassword = await SecureStore.getItemAsync("rememberedPassword");
+        const savedPassword =
+          await SecureStore.getItemAsync("rememberedPassword");
         if (savedEmail && savedPassword) {
           setEmail(savedEmail);
           setPassword(savedPassword);
@@ -70,7 +122,25 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     if (!email || !password) return;
     if (isRegisterMode && (!name || !studentId)) {
-      Alert.alert("Missing Fields", "Please provide your Name and Student ID.");
+      Alert.alert(
+        "Missing Fields",
+        "Please provide your full name and ID number.",
+      );
+      return;
+    }
+    if (isRegisterMode && !isStrongPassword) {
+      Alert.alert("Weak Password", "Please meet all password requirements.");
+      return;
+    }
+    if (isRegisterMode && password !== confirmPassword) {
+      Alert.alert("Password Mismatch", "Please re-enter the same password.");
+      return;
+    }
+    if (isRegisterMode && !acceptedTerms) {
+      Alert.alert(
+        "Terms Required",
+        "Please agree to the Terms of Service and Privacy Policy.",
+      );
       return;
     }
 
@@ -149,38 +219,56 @@ export default function LoginScreen() {
         >
           {/* Main Content */}
           <View className="flex-1 px-8 pt-6 pb-6">
-            
             {/* Back Button */}
-            <Pressable onPress={() => router.back()} className="mb-6 w-10 h-10 items-center justify-center rounded-full bg-gray-100">
+            <Pressable
+              onPress={handleBackPress}
+              className="mb-6 w-10 h-10 items-center justify-center rounded-full bg-gray-100"
+            >
               <Ionicons name="arrow-back" size={24} color="#081C4A" />
             </Pressable>
 
             {/* Header */}
-            <View className="mb-8">
-              <Text className="text-3xl font-poppins-bold text-primary mb-1">
-                {isRegisterMode ? "Create Account" : "Welcome Back!"}
-              </Text>
-              <Text className="text-base font-inter text-gray-500 leading-6">
-                {isRegisterMode
-                  ? "Join the UTeM Ride community."
-                  : "Log in with your UTeM email\nto continue."}
-              </Text>
-            </View>
+            {isRegisterMode ? (
+              <View className="mb-7 flex-row items-start justify-between">
+                <View className="flex-1 pr-5">
+                  <Text className="text-3xl font-poppins-bold text-primary mb-2">
+                    Create Account
+                  </Text>
+                  <Text className="text-base font-inter text-gray-500 leading-6">
+                    Fill in your details to create{"\n"}your UTeM Ride account.
+                  </Text>
+                </View>
+                <Image
+                  source={logo}
+                  style={{ width: 82, height: 82 }}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View className="mb-8">
+                <Text className="text-3xl font-poppins-bold text-primary mb-1">
+                  Welcome Back!
+                </Text>
+                <Text className="text-base font-inter text-gray-500 leading-6">
+                  Log in with your UTeM email{"\n"}to continue.
+                </Text>
+              </View>
+            )}
 
             {/* Fields */}
             {isRegisterMode && (
               <>
                 <TextInputField
                   label="Full Name"
-                  placeholder="e.g. Ali Bin Abu"
+                  placeholder="Enter your full name"
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
                   icon="person-outline"
                 />
                 <TextInputField
-                  label="Student / Staff ID"
-                  placeholder="e.g. B032410000"
+                  label="ID Number"
+                  placeholder="Enter your ID number"
                   value={studentId}
                   onChangeText={setStudentId}
                   autoCapitalize="characters"
@@ -188,24 +276,24 @@ export default function LoginScreen() {
                 />
 
                 {/* Domain Selector */}
-                <View className="mb-2">
-                  <Text className="text-sm font-poppins-medium text-gray-700 mb-2">
+                <View className="mb-4">
+                  <Text className="text-sm font-inter-medium text-gray-700 mb-2">
                     Email Type
                   </Text>
-                  <View className="flex-row rounded-xl overflow-hidden border border-accent-dark">
+                  <View className="flex-row rounded-button overflow-hidden border-2 border-primary-100 bg-background-soft p-1">
                     <Pressable
                       onPress={() => setEmailDomain("@student.utem.edu.my")}
-                      className={`flex-1 py-3 items-center ${
+                      className={`flex-1 py-3 items-center rounded-xl ${
                         emailDomain === "@student.utem.edu.my"
-                          ? "bg-primary"
-                          : "bg-accent"
+                          ? "bg-primary-600"
+                          : "bg-transparent"
                       }`}
                     >
                       <Text
                         className={`text-sm font-poppins-semibold ${
                           emailDomain === "@student.utem.edu.my"
                             ? "text-white"
-                            : "text-gray-500"
+                            : "text-primary"
                         }`}
                       >
                         Student
@@ -213,17 +301,17 @@ export default function LoginScreen() {
                     </Pressable>
                     <Pressable
                       onPress={() => setEmailDomain("@utem.edu.my")}
-                      className={`flex-1 py-3 items-center ${
+                      className={`flex-1 py-3 items-center rounded-xl ${
                         emailDomain === "@utem.edu.my"
-                          ? "bg-primary"
-                          : "bg-accent"
+                          ? "bg-primary-600"
+                          : "bg-transparent"
                       }`}
                     >
                       <Text
                         className={`text-sm font-poppins-semibold ${
                           emailDomain === "@utem.edu.my"
                             ? "text-white"
-                            : "text-gray-500"
+                            : "text-primary"
                         }`}
                       >
                         Staff
@@ -235,8 +323,12 @@ export default function LoginScreen() {
             )}
 
             <TextInputField
-              label="UTeM Email"
-              placeholder="b032410000@student.utem.edu.my"
+              label={isRegisterMode ? "Email" : "UTeM Email"}
+              placeholder={
+                isRegisterMode
+                  ? `idnumber${emailDomain}`
+                  : "b032410000@student.utem.edu.my"
+              }
               value={email}
               onChangeText={isRegisterMode ? undefined : setEmail}
               editable={!isRegisterMode}
@@ -251,20 +343,27 @@ export default function LoginScreen() {
                   : undefined
               }
             />
+            {isRegisterMode && (
+              <Text className="-mt-3 mb-4 text-xs font-inter-medium text-secondary">
+                Please use your official UTeM email ({emailDomain})
+              </Text>
+            )}
 
             <View className="relative mb-4">
               <TextInputField
                 label="Password"
-                placeholder="Enter your password"
+                placeholder={
+                  isRegisterMode ? "Create a password" : "Enter your password"
+                }
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 icon="lock-closed-outline"
               />
-              <Pressable 
+              <Pressable
                 onPress={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: 16, top: 48 }}
+                style={{ position: "absolute", right: 16, top: 48 }}
               >
                 <Ionicons
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -273,6 +372,54 @@ export default function LoginScreen() {
                 />
               </Pressable>
             </View>
+
+            {isRegisterMode && (
+              <>
+                <View className="relative mb-3">
+                  <TextInputField
+                    label="Re-enter Password"
+                    placeholder="Re-enter your password"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    icon="lock-closed-outline"
+                    error={
+                      confirmPassword.length > 0 && password !== confirmPassword
+                        ? "Passwords do not match"
+                        : undefined
+                    }
+                  />
+                  <Pressable
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{ position: "absolute", right: 16, top: 48 }}
+                  >
+                    <Ionicons
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={22}
+                      color="#9CA3AF"
+                    />
+                  </Pressable>
+                </View>
+
+                <View className="mb-5 rounded-button border border-gray-200 bg-background-soft px-4 py-3">
+                  <PasswordRule
+                    valid={hasMinimumLength}
+                    label="At least 8 characters"
+                  />
+                  <PasswordRule
+                    valid={hasLettersAndNumbers}
+                    label="Contains letters and numbers"
+                  />
+                  <PasswordRule
+                    valid={hasSpecialCharacter}
+                    label="Contains at least one special character"
+                  />
+                </View>
+              </>
+            )}
 
             {/* Remember Me */}
             {!isRegisterMode && (
@@ -291,9 +438,47 @@ export default function LoginScreen() {
               </Pressable>
             )}
 
+            {isRegisterMode && (
+              <View className="flex-row items-start mb-5">
+                <Pressable onPress={() => setAcceptedTerms(!acceptedTerms)}>
+                  <Ionicons
+                    name={acceptedTerms ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={acceptedTerms ? "#245CDE" : "#CBD5E1"}
+                    style={{ marginTop: 1 }}
+                  />
+                </Pressable>
+                <View className="flex-1 flex-row flex-wrap ml-2">
+                  <Pressable onPress={() => setAcceptedTerms(!acceptedTerms)}>
+                    <Text className="text-sm font-inter text-gray-500 leading-5">
+                      I agree to the{" "}
+                    </Text>
+                  </Pressable>
+                  <Link href="/terms" asChild>
+                    <Pressable>
+                      <Text className="text-sm font-inter-semibold text-secondary leading-5">
+                        Terms of Service
+                      </Text>
+                    </Pressable>
+                  </Link>
+                  <Text className="text-sm font-inter text-gray-500 leading-5">
+                    {" "}
+                    and{" "}
+                  </Text>
+                  <Link href="/privacy" asChild>
+                    <Pressable>
+                      <Text className="text-sm font-inter-semibold text-secondary leading-5">
+                        Privacy Policy
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </View>
+              </View>
+            )}
+
             {/* Continue Button */}
             <PrimaryButton
-              title={isRegisterMode ? "Register" : "Login"}
+              title={isRegisterMode ? "Create Account" : "Login"}
               onPress={handleSubmit}
               loading={loading}
             />
@@ -305,67 +490,53 @@ export default function LoginScreen() {
                   ? "Already have an account? "
                   : "Don't have an account? "}
               </Text>
-              <Pressable onPress={async () => {
-                const goingToRegister = !isRegisterMode;
-                setIsRegisterMode(goingToRegister);
-                setShowPassword(false);
+              <Pressable
+                onPress={async () => {
+                  const goingToRegister = !isRegisterMode;
+                  setIsRegisterMode(goingToRegister);
+                  setShowPassword(false);
+                  setShowConfirmPassword(false);
 
-                if (goingToRegister) {
-                  // Clear fields for fresh registration
-                  setPassword("");
-                  setName("");
-                  setStudentId("");
-                  setEmailDomain("@student.utem.edu.my");
-                } else {
-                  // Restore remembered credentials for login
-                  setCredentialsLoaded(false);
-                  const savedEmail = await SecureStore.getItemAsync("rememberedEmail");
-                  const savedPassword = await SecureStore.getItemAsync("rememberedPassword");
-                  if (savedEmail && savedPassword) {
-                    setEmail(savedEmail);
-                    setPassword(savedPassword);
-                    setRememberMe(true);
+                  if (goingToRegister) {
+                    resetRegisterFields();
                   } else {
-                    setEmail("");
-                    setPassword("");
+                    await switchToLoginMode();
                   }
-                  setName("");
-                  setStudentId("");
-                  setCredentialsLoaded(true);
-                }
-              }}>
+                }}
+              >
                 <Text className="font-poppins-bold text-secondary">
                   {isRegisterMode ? "Log In" : "Register"}
                 </Text>
               </Pressable>
             </View>
 
-            {/* Terms & Privacy */}
-            <View className="mt-8 items-center">
-              <Text className="text-xs font-poppins text-gray-400 text-center leading-5">
-                By continuing, you agree to our{" "}
-              </Text>
-              <View className="flex-row">
-                <Link href="/terms" asChild>
-                  <Pressable>
-                    <Text className="text-xs font-poppins-semibold text-secondary underline">
-                      Terms of Service
-                    </Text>
-                  </Pressable>
-                </Link>
-                <Text className="text-xs font-poppins text-gray-400">
-                  {" "}
-                  and{" "}
+            {!isRegisterMode && (
+              <View className="mt-8 items-center">
+                <Text className="text-xs font-poppins text-gray-400 text-center leading-5">
+                  By continuing, you agree to our{" "}
                 </Text>
-                <Link href="/privacy" asChild>
-                  <Pressable>
-                    <Text className="text-xs font-poppins-semibold text-secondary underline">
-                      Privacy Policy
-                    </Text>
-                  </Pressable>
-                </Link>
+                <View className="flex-row">
+                  <Link href="/terms" asChild>
+                    <Pressable>
+                      <Text className="text-xs font-poppins-semibold text-secondary underline">
+                        Terms of Service
+                      </Text>
+                    </Pressable>
+                  </Link>
+                  <Text className="text-xs font-poppins text-gray-400">
+                    {" "}
+                    and{" "}
+                  </Text>
+                  <Link href="/privacy" asChild>
+                    <Pressable>
+                      <Text className="text-xs font-poppins-semibold text-secondary underline">
+                        Privacy Policy
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </View>
               </View>
-            </View>
+            )}
           </View>
 
           {/* Skyline Illustration (bottom) */}
@@ -380,5 +551,25 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function PasswordRule({ valid, label }: { valid: boolean; label: string }) {
+  return (
+    <View className="flex-row items-center py-1">
+      <Ionicons
+        name={valid ? "checkmark-circle" : "ellipse-outline"}
+        size={16}
+        color={valid ? "#22C55E" : "#CBD5E1"}
+        style={{ marginRight: 8 }}
+      />
+      <Text
+        className={`text-xs font-inter ${
+          valid ? "text-gray-600" : "text-gray-400"
+        }`}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
